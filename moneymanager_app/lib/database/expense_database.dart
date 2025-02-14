@@ -52,4 +52,57 @@ class ExpenseDatabase extends ChangeNotifier {
   }
 
   // H E L P E R
+  //Total expenses for each month
+  Future<Map<String,double>> calculateMonthlyTotals() async {
+    await readExpenses();
+
+    Map<String, double> monthlyTotals = {};
+
+    for (var expense in _allExpenses) {
+      String yearMonth = "${expense.date.year}-${expense.date.month}";
+
+      if (!monthlyTotals.containsKey(yearMonth)){
+        monthlyTotals[yearMonth] = 0;
+      }
+
+      monthlyTotals[yearMonth] = monthlyTotals[yearMonth]! + expense.amount;
+    }
+    return monthlyTotals;
+  }
+  
+  //Current month total
+  Future<double> calculateCurrentMonthTotal() async {
+    await readExpenses();
+
+    int currentMonth = DateTime.now().month;
+    int currentYear = DateTime.now().year;
+
+    List<Expense> currentMonthExpenses = _allExpenses.where((expense) {
+      return expense.date.month == currentMonth && expense.date.year == currentYear;
+    }).toList();
+
+    double total = currentMonthExpenses.fold(0, (sum, expense) => sum + expense.amount);
+
+    return total;
+  }
+
+  //Get start month
+  int getStartMonth() {
+    if(_allExpenses.isEmpty) {
+      return DateTime.now().month;
+    }
+    _allExpenses.sort((a, b) => a.date.compareTo(b.date),);
+
+    return _allExpenses.first.date.month;
+  }
+
+  //Get start year
+  int getStartYear() {
+    if(_allExpenses.isEmpty) {
+      return DateTime.now().year;
+    }
+    _allExpenses.sort((a, b) => a.date.compareTo(b.date),);
+
+    return _allExpenses.first.date.year;
+  }
 }

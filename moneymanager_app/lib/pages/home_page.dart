@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
+import 'package:moneymanager_app/bar%20graph/bar_graph.dart';
 import 'package:moneymanager_app/components/my_list_tile.dart';
 import 'package:moneymanager_app/database/expense_database.dart';
 import 'package:moneymanager_app/helper/helper_functions.dart';
@@ -17,13 +19,23 @@ class _HomePageState extends State<HomePage> {
   TextEditingController nameController = TextEditingController();
   TextEditingController amountController = TextEditingController();
 
+  Future<Map<String,double>>? _monthlyTotalsFuture;
+  Future<double>? _calculateCurrentMonthTotal;
+
   @override
   void initState() {
     Provider.of<ExpenseDatabase>(context, listen: false).readExpenses();
 
+    refreshData();
+
     super.initState();
   }
 
+  void refreshData() {
+    _monthlyTotalsFuture  = Provider.of<ExpenseDatabase>(context, listen: false).calculateMonthlyTotals();
+    _calculateCurrentMonthTotal = Provider.of<ExpenseDatabase>(context, listen: false).calculateCurrentMonthTotal();
+  }
+ 
   void openNewExpenseBox() {
     showDialog(
       context: context,
@@ -97,25 +109,98 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context){
     return Consumer<ExpenseDatabase>(
-      builder: (context, value, child) => Scaffold(
-        floatingActionButton: FloatingActionButton(
-          onPressed: openNewExpenseBox,
-          child: const Icon(Icons.add),
-        ),
-        body: ListView.builder(
-          itemCount: value.allExpense.length,
-          itemBuilder: (context, index) {
-            Expense individualExpense = value.allExpense[index];
+      builder: (context, value, child) {
+        int startMonth = value.getStartMonth();
+        int startYear = value.getStartYear();
+        int currentMonth = DateTime.now().month;
+        int currentYear = DateTime.now().year;
 
-            return MyListTile(
-              title: individualExpense.name,
-              trailing: formatAmount(individualExpense.amount),
-              onEditPressed: (context) => openEditBox(individualExpense),
-              onDeletePressed: (context) => openDeleteBox(individualExpense),
-            );
-          },
-        ),
-      ),
+        int monthCount = calculateMonthCount(startYear, startMonth, currentYear, currentMonth);
+
+        List<Expense> currentMonthExpenses = 
+        value.allExpense.where((expense) {
+          return expense.date.year == currentYear && expense.date.month == currentMonth;
+        }).toList();
+        
+        return Scaffold(
+          backgroundColor: Colors.grey.shade300,
+          floatingActionButton: FloatingActionButton(
+            onPressed: openNewExpenseBox,
+            child: const Icon(Icons.add),
+          ),
+          appBar:AppBar(
+            backgroundColor: Colors.transparent,
+            title: FutureBuilder<double>(
+              future: _calculateCurrentMonthTotal,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("\₹${snapshot.data!.toStringAsFixed(2)}"),
+                      Text(getCurrentMonthName()),
+                    ],
+                  );
+                }
+                else {
+                  return const Text("Loading...");
+                }
+              },
+            ),
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 250,
+                  child: FutureBuilder(
+                    future: _monthlyTotalsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done){
+                        Map<String,double> monthlyTotals = snapshot.data ?? {};
+                  
+                        List<double> monthlySummary = List.generate(monthCount, (index) {
+                          int year = startYear + (startMonth + index - 1) ~/ 12;
+                          int month = (startMonth + index - 1) % 12 + 1;
+
+                          String yearMonthKey = "$year-$month";
+
+                          return monthlyTotals[yearMonthKey] ?? 0.0;
+                        });
+                  
+                        return MyBarGraph(monthlySummary: monthlySummary, startMonth: startMonth);
+                      }
+                      else {
+                        return const Center(child: Text("Loading..."),);
+                      }
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 25,), 
+            
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: currentMonthExpenses.length,
+                    itemBuilder: (context, index) {
+                      int reveredIndex = currentMonthExpenses.length - 1 - index;
+
+                      Expense individualExpense = currentMonthExpenses[reveredIndex];
+            
+                      return MyListTile(
+                       title: individualExpense.name,
+                       trailing: formatAmount(individualExpense.amount),
+                       onEditPressed: (context) => openEditBox(individualExpense),
+                       onDeletePressed: (context) => openDeleteBox(individualExpense),
+                      );
+                   },
+                 ),
+               ),
+             ],
+            ),
+          ),
+        );
+      }
     );
   }
 
@@ -147,6 +232,8 @@ class _HomePageState extends State<HomePage> {
 
           nameController.clear();
           amountController.clear();
+
+          refreshData();
         }
       },
       child: const Text("Save"),
@@ -172,6 +259,8 @@ class _HomePageState extends State<HomePage> {
           int existingid = expense.id;
 
           await context.read<ExpenseDatabase>().updateExpense(existingid, updatedExpense);
+
+          refreshData();
         }
       },
       child: const Text("Save"),
@@ -184,6 +273,8 @@ class _HomePageState extends State<HomePage> {
         Navigator.pop(context);
         
         await context.read<ExpenseDatabase>().deleteExpense(id);
+
+        refreshData();
       },
       child: const Text("Delete"),
     );
