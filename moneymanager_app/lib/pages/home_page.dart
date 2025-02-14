@@ -158,6 +158,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  bool _isDarkMode = false;
+  void _toggleDarkMode() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ExpenseDatabase>(
@@ -173,158 +180,183 @@ class _HomePageState extends State<HomePage> {
             .where((expense) => expense.date.year == currentYear && expense.date.month == currentMonth)
             .toList();
 
-        return Scaffold(
-          backgroundColor: Colors.grey.shade300,
-          floatingActionButton: Container(
-            constraints: const BoxConstraints(maxWidth: 200, maxHeight: 50),
-            child: FloatingActionButton.extended(
-              onPressed: openNewExpenseBox,
-              label: const Text(
-                "Add Expense",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              icon: const Icon(Icons.attach_money, color: Colors.white, size: 18),
-              backgroundColor: Colors.grey.shade800,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            title: FutureBuilder<double>(
-              future: _calculateCurrentMonthTotal,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("\₹${snapshot.data!.toStringAsFixed(2)}"),
-                      Text(getCurrentMonthName()),
-                    ],
-                  );
-                } else {
-                  return const Text("Loading...");
-                }
-              },
-            ),
-          ),
-          
-          body: SafeArea(
-            child: Column(
-              children: [
-                // Bar Chart Section
-                SizedBox(
-                  height: 250,
-                  child: _showCategoryChart
-                      ? FutureBuilder(
-                          future: _categoryTotalsFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.done) {
-                              Map<String, Map<ExpenseCategory, double>> categoryTotals =
-                                  snapshot.data ?? {};
-
-                              return MyCategoryBarGraph(
-                                categoryTotals: categoryTotals,
-                                startMonth: startMonth,
-                              );
-                            } else {
-                              return const Center(child: Text("Loading..."));
-                            }
-                          },
-                        )
-                      : FutureBuilder(
-                          future: _monthlyTotalsFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.done) {
-                              Map<String, double> monthlyTotals = snapshot.data ?? {};
-
-                              List<double> monthlySummary = List.generate(monthCount, (index) {
-                                int year = startYear + (startMonth + index - 1) ~/ 12;
-                                int month = (startMonth + index - 1) % 12 + 1;
-                                String yearMonthKey = "$year-$month";
-                                return monthlyTotals[yearMonthKey] ?? 0.0;
-                              });
-
-                              return MyBarGraph(
-                                monthlySummary: monthlySummary,
-                                startMonth: startMonth,
-                              );
-                            } else {
-                              return const Center(child: Text("Loading..."));
-                            }
-                          },
-                        ),
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: _isDarkMode
+          ? ThemeData.dark()
+          : ThemeData.light(),
+          home: Scaffold(
+            backgroundColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+            floatingActionButton: Container(
+              constraints: const BoxConstraints(maxWidth: 200, maxHeight: 50),
+              child: FloatingActionButton.extended(
+                onPressed: openNewExpenseBox,
+                label: Text(
+                  "Add Expense",
+                  style: TextStyle(color: _isDarkMode ? Colors.grey.shade800 : Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-
-                // Toggle Switch for Chart View
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return ToggleButtons(
-                      borderRadius: BorderRadius.circular(4),
-                      selectedColor: Colors.white,
-                      fillColor: Colors.grey.shade800,
-                      color: Colors.grey.shade800,
-                      isSelected: [!_showCategoryChart, _showCategoryChart],
-                      onPressed: (index) {
-                        setState(() {
-                          _showCategoryChart = index == 1;
-                        });
-                      },
-                      constraints: BoxConstraints(
-                        minWidth: (constraints.maxWidth - 50) / 2,
-                      ),
+                icon: Icon(Icons.attach_money, color: _isDarkMode ? Colors.grey.shade800 : Colors.white, size: 18),
+                backgroundColor: _isDarkMode ? Colors.white: Colors.grey.shade800,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              title: FutureBuilder<double>(
+                future: _calculateCurrentMonthTotal,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          child: constraints.maxWidth < 300
-                              ? const Column(
-                                  children: [
-                                    Text("Monthly", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                    Text("Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                  ],
-                                )
-                              : const Text("Monthly Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          child: constraints.maxWidth < 300
-                              ? const Column(
-                                  children: [
-                                    Text("Category", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                    Text("Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                  ],
-                                )
-                              : const Text("Category Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        Text(getCurrentMonthName()),
+                        Text("\₹${snapshot.data!.toStringAsFixed(2)}"),
+                        IconButton(
+                          icon: Icon(
+                            _isDarkMode ? Icons.nights_stay : Icons.sunny,
+                            color: _isDarkMode ? Colors.white : Colors.grey.shade800,
+                            size: 25,
+                          ),
+                          onPressed: () {
+                            _toggleDarkMode();
+                          },
                         ),
                       ],
                     );
-                  },
-                ),
+                  } else {
+                    return const Text("Loading...");
+                  }
+                },
+              ),
+            ),
+            
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // Bar Chart Section
+                  SizedBox(
+                    height: 250,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 50), // Leave 50px on each side
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4), // Add border radius
+                        ),
+                        child: _showCategoryChart
+                            ? FutureBuilder(
+                                future: _categoryTotalsFuture,
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.done) {
+                                    Map<String, Map<ExpenseCategory, double>> categoryTotals =
+                                        snapshot.data ?? {};
 
-                const SizedBox(height: 5,),
+                                    return MyCategoryBarGraph(
+                                      categoryTotals: categoryTotals,
+                                      startMonth: startMonth,
+                                    );
+                                  } else {
+                                    return const Center(child: Text("Loading..."));
+                                  }
+                                },
+                              )
+                            : FutureBuilder(
+                                future: _monthlyTotalsFuture,
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.done) {
+                                    Map<String, double> monthlyTotals = snapshot.data ?? {};
 
-                // Expense List
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: currentMonthExpenses.length,
-                    itemBuilder: (context, index) {
-                      int reversedIndex = currentMonthExpenses.length - 1 - index;
-                      Expense individualExpense = currentMonthExpenses[reversedIndex];
+                                    List<double> monthlySummary = List.generate(monthCount, (index) {
+                                      int year = startYear + (startMonth + index - 1) ~/ 12;
+                                      int month = (startMonth + index - 1) % 12 + 1;
+                                      String yearMonthKey = "$year-$month";
+                                      return monthlyTotals[yearMonthKey] ?? 0.0;
+                                    });
 
-                      return MyListTile(
-                        title: individualExpense.name,
-                        trailing: formatAmount(individualExpense.amount),
-                        onEditPressed: (context) => openEditBox(individualExpense),
-                        onDeletePressed: (context) => openDeleteBox(individualExpense),
+                                    return MyBarGraph(
+                                      monthlySummary: monthlySummary,
+                                      startMonth: startMonth,
+                                    );
+                                  } else {
+                                    return const Center(child: Text("Loading..."));
+                                  }
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
+
+                  // Toggle Switch for Chart View
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return ToggleButtons(
+                        borderRadius: BorderRadius.circular(4),
+                        selectedColor: _isDarkMode ? Colors.grey.shade800 : Colors.white,
+                        fillColor: _isDarkMode ? Colors.grey.shade300 : Colors.grey.shade800,
+                        color: _isDarkMode ? Colors.white : Colors.grey.shade800,
+                        isSelected: [!_showCategoryChart, _showCategoryChart],
+                        onPressed: (index) {
+                          setState(() {
+                            _showCategoryChart = index == 1;
+                          });
+                        },
+                        constraints: BoxConstraints(
+                          minWidth: (constraints.maxWidth - 50) / 2,
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: constraints.maxWidth < 300
+                                ? const Column(
+                                    children: [
+                                      Text("Monthly", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                      Text("Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                    ],
+                                  )
+                                : const Text("Monthly Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: constraints.maxWidth < 300
+                                ? const Column(
+                                    children: [
+                                      Text("Category", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                      Text("Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                    ],
+                                  )
+                                : const Text("Category Expenses", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       );
                     },
                   ),
-                ),
-              ],
+          
+                  const SizedBox(height: 5,),
+          
+                  // Expense List
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: currentMonthExpenses.length,
+                      itemBuilder: (context, index) {
+                        int reversedIndex = currentMonthExpenses.length - 1 - index;
+                        Expense individualExpense = currentMonthExpenses[reversedIndex];
+          
+                        return MyListTile(
+                          title: individualExpense.name,
+                          trailing: formatAmount(individualExpense.amount),
+                          onEditPressed: (context) => openEditBox(individualExpense),
+                          onDeletePressed: (context) => openDeleteBox(individualExpense),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

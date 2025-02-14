@@ -28,3 +28,4 @@ class Expense {
     required this.category,
   });
 }
+

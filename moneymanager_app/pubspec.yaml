@@ -42,6 +42,7 @@ dependencies:
   intl: ^0.20.2
   flutter_slidable: ^3.1.2
   fl_chart: ^0.65.0
+  flutter_native_splash: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +56,13 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   isar_generator: ^3.1.0+1
   build_runner: ^2.4.11
+  flutter_launcher_icons: ^0.9.2
+
+flutter_native_splash:
+  color: "#333333"  # This will set the background color of the splash screen
+  image: assets/splash.png  # Set your splash screen image here if you want a custom one
+  android: true  # Enables splash on Android
+  ios: true  # Enables splash on iOS
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
