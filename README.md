@@ -16,5 +16,5 @@ Interface made using flutter and local data storage done using isar.
 - [x] Implement local storage (SQLite, Hive, SharedPreferences) to persist data.
 - [ ] Allow users to set a monthly budget and show a warning if they exceed it.
 
-# The App
+## The App
 <img alt="Video Preview" src ="/moneymanagerapp.gif">
