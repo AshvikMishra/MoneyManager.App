@@ -105,4 +105,28 @@ class ExpenseDatabase extends ChangeNotifier {
 
     return _allExpenses.first.date.year;
   }
+
+  //To get category totals for the month
+  Future<Map<String, Map<ExpenseCategory, double>>> calculateMonthlyCategoryTotals() async {
+    await readExpenses();
+    
+    Map<String, Map<ExpenseCategory, double>> categoryTotals = {};
+
+    for (var expense in _allExpenses) {
+      String yearMonth = "${expense.date.year}-${expense.date.month}";
+
+      if (!categoryTotals.containsKey(yearMonth)) {
+        categoryTotals[yearMonth] = {};
+      }
+
+      if (!categoryTotals[yearMonth]!.containsKey(expense.category)) {
+        categoryTotals[yearMonth]![expense.category] = 0.0;
+      }
+
+      categoryTotals[yearMonth]![expense.category] = categoryTotals[yearMonth]![expense.category]! + expense.amount;
+    }
+    
+    return categoryTotals;
+  }
+
 }
